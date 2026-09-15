@@ -39,6 +39,14 @@ export interface Batch {
   items: BatchItem[]
 }
 
+/** Axis-aligned rectangle on a floor: `x` runs along the length, `y` across the width. */
+export interface Rect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface ValidationError {
   /** Path of the offending field, e.g. `width` or `items[2].quantity`. */
   field: string
