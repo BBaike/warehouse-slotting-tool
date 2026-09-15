@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Batch, BoxType, Warehouse } from '../domain/types'
 import { validateBatch } from '../domain/validation'
-import { buildLayout } from '../domain/layout'
-import { planPlacement, type UnplacedReason } from '../domain/packing/planner'
+import { buildLayout, type Layout } from '../domain/layout'
+import { planPlacement, type PlacementPlan, type UnplacedReason } from '../domain/packing/planner'
 import { computeStats, type Stats } from '../domain/stats'
+import { FloorPlan } from '../components/FloorPlan'
 
 interface PlanningPageProps {
   warehouses: Warehouse[]
@@ -38,19 +39,19 @@ function formatPercent(value: number): string {
 export function PlanningPage({ warehouses, boxTypes, batch, onBatchChange }: PlanningPageProps) {
   const selectedWarehouse = warehouses.find((w) => w.id === batch.warehouseId) ?? null
   const [batchErrors, setBatchErrors] = useState<string[]>([])
-  const [stats, setStats] = useState<Stats | null>(null)
+  const [result, setResult] = useState<{ layout: Layout; plan: PlacementPlan; stats: Stats } | null>(null)
 
   const calculate = useMemo(
     () => () => {
       const errors = validateBatch(batch)
       setBatchErrors(errors.map((e) => e.message))
       if (errors.length > 0 || selectedWarehouse === null) {
-        setStats(null)
+        setResult(null)
         return
       }
       const layout = buildLayout(selectedWarehouse)
       const plan = planPlacement(selectedWarehouse, boxTypes, batch)
-      setStats(computeStats(layout, plan, selectedWarehouse, boxTypes))
+      setResult({ layout, plan, stats: computeStats(layout, plan, selectedWarehouse, boxTypes) })
     },
     [batch, boxTypes, selectedWarehouse],
   )
@@ -60,7 +61,7 @@ export function PlanningPage({ warehouses, boxTypes, batch, onBatchChange }: Pla
     return () => clearTimeout(timer)
   }, [calculate])
 
-  const unplacedRows = stats?.byType.filter((t) => t.unplacedCount > 0) ?? []
+  const unplacedRows = result?.stats.byType.filter((t) => t.unplacedCount > 0) ?? []
 
   return (
     <section>
@@ -126,30 +127,30 @@ export function PlanningPage({ warehouses, boxTypes, batch, onBatchChange }: Pla
             </ul>
           )}
 
-          {stats && (
+          {result && selectedWarehouse && (
             <>
               <div className="stat-cards">
                 <div className="stat-card">
-                  <span className="stat-value">{formatPercent(stats.fillRate)}</span>
+                  <span className="stat-value">{formatPercent(result.stats.fillRate)}</span>
                   <span className="stat-label">заполнение склада</span>
                 </div>
                 <div className="stat-card">
-                  <span className="stat-value">{stats.placedCount}</span>
+                  <span className="stat-value">{result.stats.placedCount}</span>
                   <span className="stat-label">коробок размещено</span>
                 </div>
                 <div className="stat-card">
-                  <span className="stat-value">{stats.unplacedCount}</span>
+                  <span className="stat-value">{result.stats.unplacedCount}</span>
                   <span className="stat-label">не поместилось</span>
                 </div>
                 <div className="stat-card">
-                  <span className="stat-value">{stats.placedWeight}</span>
+                  <span className="stat-value">{result.stats.placedWeight}</span>
                   <span className="stat-label">кг размещено</span>
                 </div>
               </div>
 
-              {stats.byFloor.length > 1 && (
+              {result.stats.byFloor.length > 1 && (
                 <ul className="entity-list">
-                  {stats.byFloor.map((floor) => (
+                  {result.stats.byFloor.map((floor) => (
                     <li key={floor.floorIndex} className="entity-row">
                       <span>Этаж {floor.floorIndex + 1}</span>
                       <span className="entity-meta">{formatPercent(floor.fillRate)}</span>
@@ -157,6 +158,13 @@ export function PlanningPage({ warehouses, boxTypes, batch, onBatchChange }: Pla
                   ))}
                 </ul>
               )}
+
+              <FloorPlan
+                warehouse={selectedWarehouse}
+                boxTypes={boxTypes}
+                layout={result.layout}
+                plan={result.plan}
+              />
 
               {unplacedRows.length > 0 && (
                 <table className="unplaced-table">

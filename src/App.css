@@ -197,6 +197,53 @@
   font-weight: 500;
 }
 
+.floor-plan {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.floor-plan-canvas {
+  position: relative;
+}
+
+.floor-plan-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.floor-plan-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 8px));
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--text-h);
+  color: var(--bg);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.floor-plan-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.floor-plan-legend li {
+  display: flex;
+  align-items: center;
+}
+
 .field-error {
   margin: 0;
   color: #e5484d;
