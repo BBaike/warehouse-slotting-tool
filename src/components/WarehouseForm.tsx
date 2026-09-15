@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import type { Warehouse } from '../domain/types'
 import { validateWarehouse } from '../domain/validation'
+import { buildLayout } from '../domain/layout'
 import { FormField } from './FormField'
+import { LayoutPreview } from './LayoutPreview'
+import { Modal } from './Modal'
+import { formatSquareMeters, pluralize } from './format'
 
 type WarehouseValues = Omit<Warehouse, 'id'>
 type RawValues = { [K in keyof WarehouseValues]: string }
@@ -28,9 +32,27 @@ function toNumber(raw: string): number {
   return raw.trim() === '' ? NaN : Number(raw)
 }
 
+function toValues(raw: RawValues): WarehouseValues {
+  return {
+    name: raw.name,
+    length: toNumber(raw.length),
+    width: toNumber(raw.width),
+    floors: toNumber(raw.floors),
+    clearance: toNumber(raw.clearance),
+    rowDepth: toNumber(raw.rowDepth),
+    aisleWidth: toNumber(raw.aisleWidth),
+  }
+}
+
 export function WarehouseForm({ initial, onSubmit, onCancel }: WarehouseFormProps) {
   const [raw, setRaw] = useState<RawValues>(() => toRaw(initial))
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const values = toValues(raw)
+  const candidate: Warehouse = { id: initial?.id ?? '', ...values }
+  // The preview ignores the name so it appears as soon as the dimensions make sense.
+  const previewable = validateWarehouse({ ...candidate, name: 'preview' }).length === 0
+  const layout = previewable ? buildLayout(candidate) : null
 
   function set(key: keyof RawValues, value: string) {
     setRaw((prev) => ({ ...prev, [key]: value }))
@@ -38,16 +60,6 @@ export function WarehouseForm({ initial, onSubmit, onCancel }: WarehouseFormProp
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const values: WarehouseValues = {
-      name: raw.name,
-      length: toNumber(raw.length),
-      width: toNumber(raw.width),
-      floors: toNumber(raw.floors),
-      clearance: toNumber(raw.clearance),
-      rowDepth: toNumber(raw.rowDepth),
-      aisleWidth: toNumber(raw.aisleWidth),
-    }
-    const candidate: Warehouse = { id: initial?.id ?? '', ...values }
     const validationErrors = validateWarehouse(candidate)
     if (validationErrors.length > 0) {
       const byField: Record<string, string> = {}
@@ -59,66 +71,79 @@ export function WarehouseForm({ initial, onSubmit, onCancel }: WarehouseFormProp
     onSubmit(values)
   }
 
+  const numeric = (key: keyof RawValues, label: string, suffix?: string) => (
+    <FormField label={label} htmlFor={`wh-${key}`} error={errors[key]} suffix={suffix}>
+      <input
+        id={`wh-${key}`}
+        inputMode="numeric"
+        value={raw[key]}
+        onChange={(e) => set(key, e.target.value)}
+      />
+    </FormField>
+  )
+
   return (
-    <form className="entity-form" onSubmit={handleSubmit}>
-      <h3>{initial ? 'Изменить склад' : 'Новый склад'}</h3>
-      <FormField label="Название" htmlFor="wh-name" error={errors.name}>
-        <input id="wh-name" value={raw.name} onChange={(e) => set('name', e.target.value)} />
-      </FormField>
-      <FormField label="Длина, см" htmlFor="wh-length" error={errors.length}>
-        <input
-          id="wh-length"
-          inputMode="numeric"
-          value={raw.length}
-          onChange={(e) => set('length', e.target.value)}
-        />
-      </FormField>
-      <FormField label="Ширина, см" htmlFor="wh-width" error={errors.width}>
-        <input
-          id="wh-width"
-          inputMode="numeric"
-          value={raw.width}
-          onChange={(e) => set('width', e.target.value)}
-        />
-      </FormField>
-      <FormField label="Этажей (1–5)" htmlFor="wh-floors" error={errors.floors}>
-        <input
-          id="wh-floors"
-          inputMode="numeric"
-          value={raw.floors}
-          onChange={(e) => set('floors', e.target.value)}
-        />
-      </FormField>
-      <FormField label="Высота этажа, см" htmlFor="wh-clearance" error={errors.clearance}>
-        <input
-          id="wh-clearance"
-          inputMode="numeric"
-          value={raw.clearance}
-          onChange={(e) => set('clearance', e.target.value)}
-        />
-      </FormField>
-      <FormField label="Глубина ряда, см" htmlFor="wh-rowDepth" error={errors.rowDepth}>
-        <input
-          id="wh-rowDepth"
-          inputMode="numeric"
-          value={raw.rowDepth}
-          onChange={(e) => set('rowDepth', e.target.value)}
-        />
-      </FormField>
-      <FormField label="Ширина прохода, см" htmlFor="wh-aisleWidth" error={errors.aisleWidth}>
-        <input
-          id="wh-aisleWidth"
-          inputMode="numeric"
-          value={raw.aisleWidth}
-          onChange={(e) => set('aisleWidth', e.target.value)}
-        />
-      </FormField>
-      <div className="form-actions">
-        <button type="submit">Сохранить</button>
-        <button type="button" onClick={onCancel}>
-          Отмена
-        </button>
-      </div>
-    </form>
+    <Modal title={initial ? 'Изменить склад' : 'Новый склад'} onClose={onCancel}>
+      <form className="entity-form" onSubmit={handleSubmit} noValidate>
+        <div className="entity-form-body">
+          <div className="entity-form-fields">
+            <FormField label="Название" htmlFor="wh-name" error={errors.name}>
+              <input
+                id="wh-name"
+                value={raw.name}
+                onChange={(e) => set('name', e.target.value)}
+                autoFocus
+              />
+            </FormField>
+
+            <fieldset className="form-group">
+              <legend>Помещение</legend>
+              <div className="form-grid">
+                {numeric('length', 'Длина', 'см')}
+                {numeric('width', 'Ширина', 'см')}
+                {numeric('floors', 'Этажей (1–5)')}
+                {numeric('clearance', 'Высота этажа', 'см')}
+              </div>
+            </fieldset>
+
+            <fieldset className="form-group">
+              <legend>Разметка</legend>
+              <div className="form-grid">
+                {numeric('rowDepth', 'Глубина ряда', 'см')}
+                {numeric('aisleWidth', 'Ширина прохода', 'см')}
+              </div>
+            </fieldset>
+          </div>
+
+          <div className="entity-form-preview" aria-live="polite">
+            <span className="eyebrow">Предпросмотр этажа</span>
+            {layout ? (
+              <>
+                <LayoutPreview length={candidate.length} width={candidate.width} layout={layout} />
+                <p className="muted">
+                  {layout.bays.length} {pluralize(layout.bays.length, ['ряд', 'ряда', 'рядов'])},{' '}
+                  {formatSquareMeters(layout.bays.reduce((s, b) => s + b.width * b.height, 0))} м²
+                  под хранение на этаж
+                </p>
+                {layout.bays.length === 0 && (
+                  <p className="field-error">Ни один ряд с проходом не помещается в ширину</p>
+                )}
+              </>
+            ) : (
+              <p className="preview-empty muted">Укажите размеры помещения и разметки</p>
+            )}
+          </div>
+        </div>
+
+        <div className="modal-actions">
+          <button type="button" className="button" onClick={onCancel}>
+            Отмена
+          </button>
+          <button type="submit" className="button button-primary">
+            Сохранить
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

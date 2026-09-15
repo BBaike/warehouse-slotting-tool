@@ -25,7 +25,7 @@ export const SEED_BOX_TYPES: BoxType[] = [
   {
     id: 'seed-box-square',
     name: 'Квадратная',
-    color: '#3d5a80',
+    color: '#5b8def',
     length: 40,
     width: 40,
     height: 40,
@@ -35,7 +35,7 @@ export const SEED_BOX_TYPES: BoxType[] = [
   {
     id: 'seed-box-small',
     name: 'Малая',
-    color: '#81b29a',
+    color: '#5fbf8f',
     length: 40,
     width: 30,
     height: 30,

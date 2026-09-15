@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import type { Warehouse } from '../domain/types'
+import { buildLayout } from '../domain/layout'
 import { WarehouseForm } from '../components/WarehouseForm'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { LayoutPreview } from '../components/LayoutPreview'
+import { EmptyState } from '../components/EmptyState'
+import { formatMeters, formatSquareMeters, pluralize } from '../components/format'
 
 interface WarehousesPageProps {
   warehouses: Warehouse[]
@@ -22,36 +26,82 @@ export function WarehousesPage({ warehouses, onAdd, onUpdate, onRemove }: Wareho
       : null
 
   return (
-    <section>
-      <div className="page-toolbar">
-        <h2>Склады</h2>
-        <button type="button" onClick={() => setFormState('new')}>
-          Добавить склад
+    <section className="page">
+      <div className="page-head">
+        <div>
+          <h2>Склады</h2>
+          <p className="muted">Помещения, их этажи и разметка на ряды и проходы.</p>
+        </div>
+        <button type="button" className="button button-primary" onClick={() => setFormState('new')}>
+          + Добавить склад
         </button>
       </div>
 
-      {warehouses.length === 0 && <p className="empty-state">Складов пока нет.</p>}
-
-      <ul className="entity-list">
-        {warehouses.map((warehouse) => (
-          <li key={warehouse.id} className="entity-row">
-            <div>
-              <strong>{warehouse.name}</strong>
-              <span className="entity-meta">
-                {warehouse.length}×{warehouse.width} см, этажей: {warehouse.floors}
-              </span>
-            </div>
-            <div className="entity-actions">
-              <button type="button" onClick={() => setFormState(warehouse.id)}>
-                Изменить
-              </button>
-              <button type="button" onClick={() => setPendingDelete(warehouse)}>
-                Удалить
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {warehouses.length === 0 ? (
+        <EmptyState
+          title="Складов пока нет"
+          text="Добавьте помещение — приложение само разметит этаж на ряды и проходы."
+          action="Добавить склад"
+          onAction={() => setFormState('new')}
+        />
+      ) : (
+        <ul className="card-grid">
+          {warehouses.map((warehouse) => {
+            const layout = buildLayout(warehouse)
+            const storageArea = layout.bays.reduce((sum, b) => sum + b.width * b.height, 0)
+            return (
+              <li key={warehouse.id} className="card">
+                <LayoutPreview
+                  className="card-media"
+                  length={warehouse.length}
+                  width={warehouse.width}
+                  layout={layout}
+                />
+                <div className="card-body">
+                  <h3>{warehouse.name}</h3>
+                  <dl className="spec-list">
+                    <div>
+                      <dt>Размер этажа</dt>
+                      <dd>
+                        {formatMeters(warehouse.length)} × {formatMeters(warehouse.width)} м
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Этажей</dt>
+                      <dd>
+                        {warehouse.floors}, высота {warehouse.clearance} см
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Разметка</dt>
+                      <dd>
+                        {layout.bays.length} {pluralize(layout.bays.length, ['ряд', 'ряда', 'рядов'])} по{' '}
+                        {warehouse.rowDepth} см, проход {warehouse.aisleWidth} см
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Хранение</dt>
+                      <dd>{formatSquareMeters(storageArea * warehouse.floors)} м² на всех этажах</dd>
+                    </div>
+                  </dl>
+                </div>
+                <div className="card-actions">
+                  <button type="button" className="button" onClick={() => setFormState(warehouse.id)}>
+                    Изменить
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-quiet-danger"
+                    onClick={() => setPendingDelete(warehouse)}
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
 
       {formState !== 'closed' && (
         <WarehouseForm
@@ -71,7 +121,7 @@ export function WarehousesPage({ warehouses, onAdd, onUpdate, onRemove }: Wareho
 
       {pendingDelete && (
         <ConfirmDialog
-          message={`Удалить склад «${pendingDelete.name}»?`}
+          message={`Удалить склад «${pendingDelete.name}»? Если он выбран на «Размещении», партия сбросится.`}
           onConfirm={() => {
             onRemove(pendingDelete.id)
             setPendingDelete(null)

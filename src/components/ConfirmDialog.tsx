@@ -1,3 +1,5 @@
+import { Modal } from './Modal'
+
 interface ConfirmDialogProps {
   message: string
   onConfirm: () => void
@@ -6,23 +8,16 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmDialogProps) {
   return (
-    <div className="dialog-backdrop" role="presentation" onClick={onCancel}>
-      <div
-        className="dialog"
-        role="dialog"
-        aria-modal="true"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <p>{message}</p>
-        <div className="dialog-actions">
-          <button type="button" className="danger" onClick={onConfirm}>
-            Удалить
-          </button>
-          <button type="button" onClick={onCancel}>
-            Отмена
-          </button>
-        </div>
+    <Modal title="Удаление" size="small" onClose={onCancel}>
+      <p className="modal-text">{message}</p>
+      <div className="modal-actions">
+        <button type="button" className="button" onClick={onCancel}>
+          Отмена
+        </button>
+        <button type="button" className="button button-danger" onClick={onConfirm} autoFocus>
+          Удалить
+        </button>
       </div>
-    </div>
+    </Modal>
   )
 }
