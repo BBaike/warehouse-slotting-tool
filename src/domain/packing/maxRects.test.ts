@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HEURISTICS, MaxRectsBin, type Heuristic, type Placement } from './maxRects'
 import type { Rect } from '../types'
+import { mulberry32 } from '../testing/random'
 
 const overlaps = (a: Rect, b: Rect) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
@@ -13,18 +14,6 @@ const contains = (outer: Rect, inner: Rect) =>
   inner.y >= outer.y &&
   inner.x + inner.width <= outer.x + outer.width &&
   inner.y + inner.height <= outer.y + outer.height
-
-/** Deterministic PRNG (mulberry32) so a failing random case can be reproduced from its seed. */
-function mulberry32(seed: number) {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
 
 describe('MaxRectsBin', () => {
   it.each(HEURISTICS)('fills the bin exactly with four squares (%s)', (heuristic) => {
