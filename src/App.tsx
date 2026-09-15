@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from './state/useAppStore'
 import { WarehousesPage } from './pages/WarehousesPage'
 import { BoxTypesPage } from './pages/BoxTypesPage'
+import { PlanningPage } from './pages/PlanningPage'
 import './App.css'
 
 type Tab = 'warehouses' | 'boxTypes' | 'planning'
@@ -50,7 +51,14 @@ function App() {
             onRemove={store.removeBoxType}
           />
         )}
-        {tab === 'planning' && <p className="placeholder">Раздел «Размещение» в разработке.</p>}
+        {tab === 'planning' && (
+          <PlanningPage
+            warehouses={store.warehouses}
+            boxTypes={store.boxTypes}
+            batch={store.batch}
+            onBatchChange={store.setBatch}
+          />
+        )}
       </main>
     </div>
   )
