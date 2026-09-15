@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from './state/useAppStore'
 import { WarehousesPage } from './pages/WarehousesPage'
+import { BoxTypesPage } from './pages/BoxTypesPage'
 import './App.css'
 
 type Tab = 'warehouses' | 'boxTypes' | 'planning'
@@ -41,7 +42,14 @@ function App() {
             onRemove={store.removeWarehouse}
           />
         )}
-        {tab === 'boxTypes' && <p className="placeholder">Раздел «Типы коробок» в разработке.</p>}
+        {tab === 'boxTypes' && (
+          <BoxTypesPage
+            boxTypes={store.boxTypes}
+            onAdd={store.addBoxType}
+            onUpdate={store.updateBoxType}
+            onRemove={store.removeBoxType}
+          />
+        )}
         {tab === 'planning' && <p className="placeholder">Раздел «Размещение» в разработке.</p>}
       </main>
     </div>

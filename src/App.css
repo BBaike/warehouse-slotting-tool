@@ -87,6 +87,16 @@
   font-size: 14px;
 }
 
+.color-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 8px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
 .entity-actions {
   display: flex;
   gap: 8px;
